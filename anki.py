@@ -184,7 +184,7 @@ def run_repl(deck, flash_cards, state, state_path, print_summary_and_exit, table
         print(text.center(term_size.columns))
 
     def handle_exit(term_size):
-        if not print_summary_and_exit:
+        if not print_summary_and_exit and deck.tag is not None:
             write_state(state_path, serialise(flash_cards, deck, state))
         read_user_exit_command(term_size)
         sys.exit(0)
@@ -244,8 +244,11 @@ def run_repl(deck, flash_cards, state, state_path, print_summary_and_exit, table
                 paths_and_cards = filter(lambda x: x[0] in deck.flash_cards, cards.items())
                 deck_cards = list(map(lambda x: x[1], paths_and_cards))
                 n_cards = len(deck_cards)
-                next_due = next(iter(sorted(deck_cards, key=lambda x: x.due))).due
-                return f'DECK(TAG = {deck.tag}, DECK_SIZE = {n_cards}, NEXT_DUE = {next_due.ctime()})'
+                due = next(iter(sorted(deck_cards, key=lambda x: x.due))).due
+                now = datetime.now()
+                days_till_due = (due - now).days
+                days_till_due = f'{days_till_due} days' if days_till_due > 0 else 'OVERDUE'
+                return f'Deck <{deck.tag}> contains <{n_cards} cards> and is next due in <{days_till_due}>'
             return 'Anki Summary\n\n'+'\n'.join(map(get_info, decks.values()))
 
         def create_prompt():
@@ -323,7 +326,6 @@ def run_repl(deck, flash_cards, state, state_path, print_summary_and_exit, table
         handle_exit(term_size)
     try:
         shuffled_cards = sorted(due_cards(deck, flash_cards), key=lambda _: random.random())
-
         due = len(shuffled_cards)
         remaining = due
         while remaining > 0:
