@@ -91,13 +91,16 @@ def new_deck(tag, flash_cards, state=None):
     )
 
 def serialise(flash_cards, deck, state=AnkiState({}, {})):
-    def card_as_dict(c):
-        return {**c._asdict(), 'due': str(c.due)}
+    def serialise_cards(cards):
+        def card_as_dict(c):
+            return {**c._asdict(), 'due': str(c.due)}
+
+        return {path: card_as_dict(card) for path, card in cards.items()}
 
     new_state = AnkiState(
         flash_cards = {
-            **maybe_state(state, 'flash_cards', {}),
-            **{path: card_as_dict(card) for path, card in flash_cards.items()}
+            **serialise_cards(maybe_state(state, 'flash_cards', {})),
+            **serialise_cards(flash_cards)
         },
         decks = {
             **{t: d._asdict() for t, d in maybe_state(state, 'decks', {}).items() },
@@ -275,7 +278,7 @@ def run_repl(deck, flash_cards, state, state_path, print_summary_and_exit, table
         return read_quiz_command(
             card.answer,
             ['1', '2', '3', '4'] + QUIT_CMDS,
-            '(1) Fail  ┃  (2) Hard  ┃  (3) Pass  ┃ (4) Easy  ┃  (Q) Quit',
+            '(1) Fail  |  (2) Hard  |  (3) Pass  | (4) Easy  |  (Q) Quit',
             remaining,
             due,
             term_size,
@@ -285,7 +288,7 @@ def run_repl(deck, flash_cards, state, state_path, print_summary_and_exit, table
         def wrap_and_align(text, columns, term_size):
             def fmt(l, spacer, width):
                 t = l.center(width) if center_text else l.ljust(width)
-                return f'┃{spacer}{t}{spacer}┃'.center(term_size.columns)
+                return f'|{spacer}{t}{spacer}|'.center(term_size.columns)
 
             gutter = 6
             width = columns - (2 + gutter * 2)
@@ -293,29 +296,29 @@ def run_repl(deck, flash_cards, state, state_path, print_summary_and_exit, table
             return '\n'.join([fmt(l, spacer, width) for l in text.split('\n')])
 
         return (
-            center_line(f'┏{"━"*table_content_cols}┓', term_size) +
-            center_line(f'┃{" "*table_content_cols}┃', term_size) +
-            center_line(f'┃{" "*table_content_cols}┃', term_size) +
+            center_line(f'+{"-"*table_content_cols}+', term_size) +
+            center_line(f'|{" "*table_content_cols}|', term_size) +
+            center_line(f'|{" "*table_content_cols}|', term_size) +
             wrap_and_align(message, table_content_cols + 2, term_size) +
-            center_line(f'┃{" "*table_content_cols}┃', term_size) +
-            center_line(f'┃{" "*table_content_cols}┃', term_size)
+            center_line(f'|{" "*table_content_cols}|', term_size) +
+            center_line(f'|{" "*table_content_cols}|', term_size)
         )
     def make_last_table_rows(command, table_content_cols, term_size):
         return (
-            center_line(f'┣{"━"*table_content_cols}┫', term_size) +
-            center_line(f'┃{command.center(table_content_cols)}┃', term_size)
-            + center_line(f'┗{"━"*table_content_cols}┛', term_size)
+            center_line(f'+{"-"*table_content_cols}+', term_size) +
+            center_line(f'|{command.center(table_content_cols)}|', term_size)
+            + center_line(f'+{"-"*table_content_cols}+', term_size)
         )
 
     def format_quiz_table(message, command, remaining, due, term_size, center_text=True):
         s, d, r = len(deck.flash_cards), due, remaining
         return (
             make_table_content_area(message, table_content_cols, term_size, center_text) +
-            center_line(f'┣{"━"*table_content_cols}┫', term_size) +
+            center_line(f'+{"━"*table_content_cols}+', term_size) +
             center_line(
-                    f'┃' +
-                    f'Deck ({deck.tag})  ┃  Deck Size: {s:03d}  ┃  Due: {d:03d}  ┃ Remaining: {r:03d}'.center(table_content_cols) +
-                    '┃'
+                    f'|' +
+                    f'Deck ({deck.tag})  |  Deck Size: {s:03d}  |  Due: {d:03d}  | Remaining: {r:03d}'.center(table_content_cols) +
+                    '|'
                 , term_size) +
             make_last_table_rows(command, table_content_cols, term_size)
         )
